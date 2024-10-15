@@ -78,10 +78,11 @@ def google_callback(request):
     access_token = refresh.access_token
     access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
     
-    return Response({
-        'access_token': str(access_token),
-        'refresh_token': str(refresh)
-    })
+    # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
+    response = Response({'message': '로그인 되었습니다.'}, status=status.HTTP_200_OK)
+    response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
+    response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=True, max_age=86400)
+    return response
 
 
 @api_view(['POST'])
@@ -96,9 +97,10 @@ def token_refresh(request):
         access_token = refresh.access_token
         access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
 
-        return Response({
-            'access_token': str(access_token),
-        })
+        # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
+        response = Response({'message': '토큰이 갱신되었습니다.'}, status=status.HTTP_200_OK)
+        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
+        return response
     except TokenError:
         return Response({'error': '유효하지 않거나 만료된 토큰입니다.'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -162,10 +164,11 @@ def register(request):
             access_token = refresh.access_token
             access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
 
-            return Response({
-                'access_token': str(access_token),
-                'refresh_token': str(refresh)
-            }, status=status.HTTP_201_CREATED)
+            # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
+            response = Response({'message': '회원가입 되었습니다.'}, status=status.HTTP_201_CREATED)
+            response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
+            response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=True, max_age=86400)
+            return response
         else:
             return Response({'error': '회원가입 실패'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except:
@@ -196,10 +199,11 @@ def login(request):
         access_token = refresh.access_token
         access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
 
-        return Response({
-            'access_token': str(access_token),
-            'refresh_token': str(refresh)
-        })
+        # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
+        response = Response({'message': '로그인 되었습니다.'}, status=status.HTTP_200_OK)
+        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
+        response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=True, max_age=86400)
+        return response
     except:
         return Response({'error': f'로그인 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -210,11 +214,20 @@ def logout(request):
         refresh_token = request.data.get('refresh_token')
         refresh = RefreshToken(refresh_token)
         refresh.blacklist()
-        return Response({'message': '로그아웃 되었습니다.'})
+
+        # 쿠키에서 jwt 토큰 삭제
+        response = Response({'message': '로그아웃 되었습니다.'}, status=status.HTTP_200_OK)
+        response.delete_cookie('access_token')
+        response.delete_cookie('refresh_token')
+        return response
     except:
         return Response({'error': '로그아웃 중 오류가 발생했습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# 왜 필요하냐?
+# access token과 refresh token의 만료 여부는 백엔드에서 확인함
+# HttpOnly 속성으로 인해 프론트엔드에서 쿠키에 직접 접근할 수 없음
+# 로그인 상태를 확인하기 위해 인증이 필요한 엔드포인트에 요청을 보내어 확인함, 응답에 따라 프론트엔드에서 로그인 상태를 업데이트함
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_info(request):
@@ -224,6 +237,6 @@ def user_info(request):
             'email': user.email,
             'full_name': user.full_name,
             'oauth_provider': user.oauth_provider
-        })
+        }, status=status.HTTP_200_OK)
     except:
-        return Response({'error': f'사용자 정보 조회 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': f'사용자 정보 조회 중 오류가 발생했습니다'}, status=status.HTTP_401_UNAUTHORIZED)
