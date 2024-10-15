@@ -71,7 +71,7 @@ def google_callback(request):
     else:
         user_id = existing_user.data[0]['user_id']
 
-    # JWT 토큰 생성
+    # JWT 토큰 생성, for_user 메서드 사용하지 않고 수동으로 정보 추가
     refresh = RefreshToken()
     refresh['user_id'] = user_id
     refresh.set_exp(lifetime=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'])
@@ -91,6 +91,7 @@ def token_refresh(request):
         return Response({'error': '리프레시 토큰이 제공되지 않았습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
+        # verify() 메서드는 RefreshToken이 instantiate될 때 자동으로 호출되더라 (default=True)
         refresh = RefreshToken(refresh_token)
         access_token = refresh.access_token
         access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
@@ -154,7 +155,7 @@ def register(request):
         result = supabase.table('users').insert(user_info).execute()
 
         if result.data:
-            # JWT 토큰 생성
+            # JWT 토큰 생성, for_user 메서드 사용하지 않고 수동으로 정보 추가
             refresh = RefreshToken()
             refresh['user_id'] = user_id
             refresh.set_exp(lifetime=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'])
@@ -188,7 +189,7 @@ def login(request):
         if not check_password(password, user['password']):
             return Response({'error': '비밀번호가 일치하지 않습니다.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # JWT 토큰 생성
+        # JWT 토큰 생성, for_user 메서드 사용하지 않고 수동으로 정보 추가
         refresh = RefreshToken()
         refresh['user_id'] = user['user_id']
         refresh.set_exp(lifetime=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'])
@@ -218,17 +219,11 @@ def logout(request):
 @permission_classes([IsAuthenticated])
 def user_info(request):
     try:
-        user_id = request.user['user_id']
-        user_data = supabase.table('users').select('*').eq('user_id', user_id).execute()
-        
-        if len(user_data.data) == 0:
-            return Response({'error': '사용자를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
-        
-        user = user_data.data[0]
+        user = request.user
         return Response({
-            'email': user['email'],
-            'full_name': user['full_name'],
-            'oauth_provider': user['oauth_provider']
+            'email': user.email,
+            'full_name': user.full_name,
+            'oauth_provider': user.oauth_provider
         })
     except:
         return Response({'error': f'사용자 정보 조회 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
