@@ -18,7 +18,7 @@ supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVIC
 def get_purchases(request):
     try:
         # 사용자 ID로 구매 내역 조회
-        user_id = request.user['user_id']
+        user_id = request.user.user_id
         purchased = supabase.table('purchased').select('item_id').eq('user_id', user_id).order('created_at', desc=True).execute()
 
         # item_id를 가지고 items 테이블에서 item 정보를 가져와서 리턴하기
@@ -34,7 +34,7 @@ def get_purchases(request):
 def prepare_purchase(request):
     try:
         data = json.loads(request.body)
-        user_id = request.user['user_id']
+        user_id = request.user.user_id
         item_ids = data.get('item_ids')
 
         if not isinstance(item_ids, list):
@@ -93,7 +93,7 @@ def approve_purchase(request):
         data = json.loads(request.body)
         oid = data.get('oid')
         tid = data.get('tid')
-        user_id = request.user['user_id']
+        user_id = request.user.user_id
         pg_token = data.get('pgToken')
 
         if not all([oid, tid, pg_token]):

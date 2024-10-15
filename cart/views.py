@@ -14,7 +14,7 @@ supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 def insert_cart(request):
     try:
         # 사용자 정보와 상품 정보 가져오기
-        user_id = request.user['user_id']
+        user_id = request.user.user_id
         item_id = request.data.get('item_id')
 
         # 이미 장바구니에 있는지 확인
@@ -47,7 +47,7 @@ def insert_cart(request):
 def get_cart_items(request):
     try:
         # 사용자 ID로 장바구니 조회
-        user_id = request.user['user_id']
+        user_id = request.user.user_id
         result = supabase.table('cart_item').select('item_id').eq('user_id', user_id).order('created_at', desc=True).execute()
 
         # item_id를 가지고 items 테이블에서 item 정보를 가져와서 리턴하기
@@ -62,7 +62,7 @@ def get_cart_items(request):
 @permission_classes([IsAuthenticated])
 def delete_cart_item(request, item_id):
     try:
-        user_id = request.user['user_id']
+        user_id = request.user.user_id
         result = supabase.table('cart_item').delete().eq('user_id', user_id).eq('item_id', item_id).execute()
         
         if result.data:

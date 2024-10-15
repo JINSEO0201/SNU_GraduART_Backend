@@ -13,7 +13,7 @@ supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def request_refund(request):
-    user_id = request.user['user_id']
+    user_id = request.user.user_id
     item_id = request.data.get('item_id')
     phone_number = request.data.get('phone_number')
 
@@ -68,7 +68,7 @@ def request_refund(request):
 @permission_classes([IsAuthenticated])
 def refund_status(request, item_id):
     try:
-        user_id = request.user['user_id']
+        user_id = request.user.user_id
         # Supabase에서 해당 item_id의 환불 상태 조회
         result = supabase.table('purchased').select('refund').eq('item_id', item_id).eq('user_id', user_id).execute()
         
