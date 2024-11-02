@@ -50,10 +50,13 @@ def get_item_details(request, item_id):
 @api_view(['GET'])
 def search_items(request):
   #해당 문자가 들어간 작품 & 작가명 모두 제공
+  
   return 0
 
 
-@api_view(['GET'])
-def get_representative_items(request):
-  #과별로 메인페이지에 띄울 대표 작품들 제공
-  return 0
+# 프론트 static파일로 제공
+# @api_view(['GET'])
+# def get_representative_items(request):
+#   #과별로 메인페이지에 띄울 대표 작품들 제공
+
+#   return 0
