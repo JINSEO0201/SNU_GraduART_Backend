@@ -11,13 +11,14 @@ from django.utils import timezone
 from django.conf import settings
 
 # Supabase 클라이언트 설정
-supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 
 @api_view(['GET'])
-def get_items(request, department):
+def get_items(request):
   #해당 단과대 작품들 정보 전달
   try:
+    department = request.GET.get('department')
     items = supabase.table('items').select('*').eq('department', department).execute()
     for item in items.data:
       id = item['itemID']
@@ -54,14 +55,47 @@ def search_items(request):
   #해당 문자가 들어간 작품 & 작가명 모두 제공
   try:
     query = request.GET.get("query", "")
-    
-    #작품명 검색
-    items_response = supabase.table("items").select("*").ilike("title", f"%{query}%").execute()
-    items
+    result = {}
+    unique_ids = []
+    #1. 작품명으로 검색
+    items_searched_title = supabase.table("items").select("*").ilike("title", f"%{query}%").execute()
+    items_searched_title_data = items_searched_title.data
+
+    #각 작품 정보에 이미지 추가하기
+    for item in items_searched_title_data:
+      id = item["id"]
+      images = supabase.table("images").select("image_original", "image_square").eq("itemID", id).execute()
+      if images.data[0]["image_square"]:
+        item["imagePath"] = images.data[0]["image_square"]
+      else:
+        item["imagePath"] = images.data[0]["image_original"]
+      unique_ids.append(id) #중복 방지
+
+
+    #2. 작가명으로 검색
+    items_searched_artist = supabase.table("items").select("*").ilike("artist", f"%{query}%").execute()
+    items_searched_artist_data = items_searched_artist.data
+
+    #각 작품 정보에 이미지 추가하기
+    for item in items_searched_artist_data:
+      id = item["id"]
+      #앞서 검색되었던 작품들 제외하고
+      if id not in unique_ids:
+        images = supabase.table("images").select("image_original", "image_square").eq("itemID", id).execute()
+        if images.data[0]["image_square"]:
+          item["imagePath"] = images.data[0]["image_square"]
+        else:
+          item["imagePath"] = images.data[0]["image_original"]
+
+
+    result["items"] = list(items_searched_title_data)
+    result["items"] += list(items_searched_artist_data)
+    return Response(result, status=status.HTTP_200_OK)
+  except:
     return Response({'error': f'작품 검색 실패'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# 프론트 static파일로 제공
+# 과별 대표 작품들은 프론트 static파일로 제공
 # @api_view(['GET'])
 # def get_representative_items(request):
 #   #과별로 메인페이지에 띄울 대표 작품들 제공
