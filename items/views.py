@@ -40,8 +40,10 @@ def get_item_details(request, item_id):
   #item_id를 받아 상세 정보 및 사진 제공
     item_detail = supabase.table('items').select("*").eq('id', item_id).execute()
     item_images = supabase.table('item_images').select("*").eq('id', item_id).execute()
+    item_artist = supabase.table('artists').select("*").eq('id', id).execute()
 
     item_detail.data['imagePath'] = item_images.data[0]
+    item_detail.data['artistInfo'] = item_artist.data[0]
     return Response(item_detail.data, status=status.HTTP_200_OK)
   except:
     return Response({'error': f'작품 상세정보 불러오기 실패'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -50,8 +52,13 @@ def get_item_details(request, item_id):
 @api_view(['GET'])
 def search_items(request):
   #해당 문자가 들어간 작품 & 작가명 모두 제공
-  
-  return 0
+  try:
+    query = request.GET.get("query", "")
+    
+    #작품명 검색
+    items_response = supabase.table("items").select("*").ilike("title", f"%{query}%").execute()
+    items
+    return Response({'error': f'작품 검색 실패'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # 프론트 static파일로 제공
