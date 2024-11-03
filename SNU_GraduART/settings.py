@@ -141,12 +141,13 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES' : (
+    'DEFAULT_PERMISSION_CLASSES' : [
         'rest_framework.permissions.IsAuthenticated',
-    ),
-    'DEFAULT_AUTHENTICATION_CLASSES': {
+        'rest_framework.permissions.AllowAny', #테스트용
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'authorize.custom_authentication.CustomJWTAuthentication', # Custom JWT Authentication
-    }
+    ]
 }
 
 SIMPLE_JWT = {
@@ -177,11 +178,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS = {
+CORS_ALLOW_HEADERS = [
     "accept",
     "authorization",
     "content-type",
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
-}
+]
