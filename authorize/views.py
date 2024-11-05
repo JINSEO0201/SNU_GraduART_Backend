@@ -8,7 +8,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
-import requests
 from supabase import create_client, Client
 import uuid
 import re
@@ -44,7 +43,6 @@ def google_callback(request):
         existing_user = supabase.table('users').select('*').eq('user_id', user_id).eq('oauth_provider', 'google').execute()
 
         if not existing_user.data:
-            print("새로운 사용자")
             # 새 사용자인 경우 DB에 추가
             email = user_data.user.email
             dummy_password = str(uuid.uuid4()) # 임의의 비밀번호 생성
@@ -61,7 +59,6 @@ def google_callback(request):
             result = supabase.table('users').insert(user_info).execute()
             user_id = result.data[0]['user_id']
         else:
-            print("기존 사용자")
             user_id = existing_user.data[0]['user_id']
 
         # JWT 토큰 생성, for_user 메서드 사용하지 않고 수동으로 정보 추가
@@ -71,6 +68,7 @@ def google_callback(request):
         access_token = refresh.access_token
         access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
         
+        print("토큰 생성함")
         # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
         response = Response({'message': '로그인 되었습니다.'}, status=status.HTTP_200_OK)
         response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
@@ -80,10 +78,10 @@ def google_callback(request):
         return Response({'error': f'로그인 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([AllowAny])
 def token_refresh(request):
-    refresh_token = request.data.get('refresh_token')
+    refresh_token = request.COOKIES.get('refresh_token')
     if not refresh_token:
         return Response({'error': '리프레시 토큰이 제공되지 않았습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -205,12 +203,13 @@ def login(request):
     except:
         return Response({'error': f'로그인 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['POST'])
+@api_view(['GET'])
 def logout(request):
     try:
-        refresh_token = request.data.get('refresh_token')
-        refresh = RefreshToken(refresh_token)
-        refresh.blacklist()
+        refresh_token = request.COOKIES.get('refresh_token')
+        if refresh_token:
+            refresh = RefreshToken(refresh_token)
+            refresh.blacklist()
 
         # 쿠키에서 jwt 토큰 삭제
         response = Response({'message': '로그아웃 되었습니다.'}, status=status.HTTP_200_OK)
