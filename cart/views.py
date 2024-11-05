@@ -1,5 +1,4 @@
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
@@ -10,7 +9,6 @@ from django.utils import timezone
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def insert_cart(request):
     try:
         # 사용자 정보와 상품 정보 가져오기
@@ -43,7 +41,6 @@ def insert_cart(request):
         return Response({'error': '장바구니 추가 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_cart_items(request):
     try:
         # 사용자 ID로 장바구니 조회
@@ -59,7 +56,6 @@ def get_cart_items(request):
         return Response({'error': '장바구니 조회 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
 def delete_cart_item(request, item_id):
     try:
         user_id = request.user.user_id

@@ -1,5 +1,4 @@
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
@@ -11,7 +10,6 @@ from django.utils import timezone
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def request_refund(request):
     user_id = request.user.user_id
     item_id = request.data.get('item_id')
@@ -65,7 +63,6 @@ def request_refund(request):
         return Response({'error': f'환불 요청 처리 중 오류가 발생했습니다.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def refund_status(request, item_id):
     try:
         user_id = request.user.user_id

@@ -1,4 +1,5 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from supabase import create_client, Client
@@ -10,6 +11,7 @@ supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVIC
 DEPARTMENT_LIST = ['Design', 'MediaArts', 'Sculpture', 'Craft', 'Oriental Painting', 'Western Painting']
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_items(request):
   try:
     department = request.GET.get('department')
@@ -50,6 +52,7 @@ def get_items(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_item_details(request, item_id):
   try:
     # UUID 형식의 item_id를 문자열로 변환
@@ -78,6 +81,7 @@ def get_item_details(request, item_id):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def search_items(request):
   #해당 문자가 들어간 작품 & 작가명 모두 제공
   try:

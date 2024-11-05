@@ -1,5 +1,4 @@
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 import json
@@ -14,7 +13,6 @@ from django.conf import settings
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_purchases(request):
     try:
         # 사용자 ID로 구매 내역 조회
@@ -30,7 +28,6 @@ def get_purchases(request):
         return Response({'error': '구매 내역 조회 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def prepare_purchase(request):
     try:
         data = json.loads(request.body)
@@ -87,7 +84,6 @@ def prepare_purchase(request):
         return Response({'error': f'결제 준비 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def approve_purchase(request):
     try:
         data = json.loads(request.body)
