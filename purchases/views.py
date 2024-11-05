@@ -17,13 +17,19 @@ def get_purchases(request):
     try:
         # 사용자 ID로 구매 내역 조회
         user_id = request.user.user_id
-        purchased = supabase.table('purchased').select('item_id').eq('user_id', user_id).order('created_at', desc=True).execute()
+        purchased = supabase.table('purchased').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
 
-        # item_id를 가지고 items 테이블에서 item 정보를 가져와서 리턴하기
-        item_ids = [item['item_id'] for item in purchased.data]
-        purchased_list = supabase.table('items').select('*').eq('itemID', item_ids).execute().data
+        # 결과 재구성
+        purchased_list = []
+        for purchase in purchased.data:
+            purchased_list.append({
+                'order_id': purchase['order_id'],
+                'item_id': purchase['item_id'],
+                'payment_method': purchase['payment_method'],
+                'total_price': purchase['total_price'],
+            })
 
-        return Response({'purchased': purchased_list})
+        return Response(purchased_list)
     except:
         return Response({'error': '구매 내역 조회 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -45,7 +51,7 @@ def prepare_purchase(request):
         for item_id in item_ids:
             item = fetch_item_details(item_id)
             if not item['onSale']:
-                return Response({'error': f'상품 {item["itemID"]}는 판매 중이 아닙니다'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': f'상품 {item["item_id"]}는 판매 중이 아닙니다'}, status=status.HTTP_400_BAD_REQUEST)
             total_price += item['price']
             item_names.append(item['title'])
             item_codes.append(str(item['num_code']))
@@ -90,7 +96,7 @@ def approve_purchase(request):
         oid = data.get('oid')
         tid = data.get('tid')
         user_id = request.user.user_id
-        pg_token = data.get('pgToken')
+        pg_token = data.get('pg_token')
 
         if not all([oid, tid, pg_token]):
             return Response({'error': '유효하지 않은 요청 본문'}, status=status.HTTP_400_BAD_REQUEST)
@@ -119,7 +125,7 @@ def approve_purchase(request):
                 insert_purchase(item, user_id, approval_result['payment_method_type'],
                                 oid, approval_result.get('card_info'),
                                 approval_result['amount']['total'], item['price'])
-                delete_cart_item(item['itemID'], user_id)
+                delete_cart_item(item['item_id'], user_id)
 
         return Response(approval_result)
 
@@ -127,7 +133,7 @@ def approve_purchase(request):
         return Response({'error': f'결제 승인 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def fetch_item_details(item_id):
-    result = supabase.table('items').select('*').eq('itemID', item_id).execute()
+    result = supabase.table('items').select('*').eq('item_id', item_id).execute()
     if result.data:
         return result.data[0]
     raise Exception(f'상품 {item_id}를 찾을 수 없습니다')
@@ -139,7 +145,7 @@ def update_item_by_code(code):
 def insert_purchase(item, user_id, pay_type, order_id, card_info, total_price, single_price):
     supabase.table('purchased').insert({
         'user_id': user_id,
-        'item_id': item['itemID'],
+        'item_id': item['item_id'],
         'title': item['title'],
         'artist': item['artist'],
         'descriptions': item['descriptions'],
