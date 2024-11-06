@@ -8,12 +8,12 @@ from django.utils import timezone
 # Supabase 클라이언트 설정
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
-@api_view(['GET'])
-def insert_cart(request, item_id):
+@api_view(['POST'])
+def insert_cart(request):
     try:
         # 사용자 정보와 상품 정보 가져오기
         user_id = request.user.user_id
-        item_id = str(item_id)
+        item_id = request.data.get('item_id')
 
         # 이미 장바구니에 있는지 확인
         cart_items = supabase.table('cart_item').select('item_id').eq('user_id', user_id).eq('item_id', item_id).execute()
