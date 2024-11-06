@@ -3,12 +3,11 @@ from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
-import requests
 from supabase import create_client, Client
 import uuid
 import re
@@ -17,77 +16,72 @@ import re
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def google_login(request):
     # Supabase OAuth URL 생성
     # google을 provider로 지정하고, google 인증 후 사용자가 돌아올 redirect_uri를 지정
-    redirect_uri = request.build_absolute_uri('/api/v1/auth/google/callback')
+    redirect_uri = f"{settings.FRONT_URL}/auth/callback" # 프론트엔드에서 지정한 콜백 URL
+    print(redirect_uri)
     auth_url = f"{settings.SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to={redirect_uri}"
     return redirect(auth_url)
 
-@api_view(['GET'])
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def google_callback(request):
-    # google 인증 결과 받은 code
-    code = request.GET.get('code')
+    # /api/v1/auth/google/callback#access_token=xxx&expires_at=xxx&expires_in=xxx&provider_token=xxx&refresh_token=xxx&token_type=bearer
+    access_token = request.data.get('access_token')
     
-    # Supabase에 액세스 토큰 요청
-    token_url = f"{settings.SUPABASE_URL}/auth/v1/token?grant_type=authorization_code"
-    headers = {
-        'Content-Type': 'application/json',
-        'apikey': settings.SUPABASE_KEY
-    }
-    data = {
-        'code': code,
-        'redirect_to': request.build_absolute_uri('/api/v1/auth/google/callback')
-    }
-    response = requests.post(token_url, json=data, headers=headers)
-    token_data = response.json()
-
-    if 'error' in token_data:
-        return Response({'error': token_data['error_description']}, status=status.HTTP_400_BAD_REQUEST)
+    if not access_token:
+        return Response({'error': '구글 로그인 중 오류가 발생했습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
     # 받아온 토큰으로 사용자 정보 조회
-    user_data = supabase.auth.get_user(token_data['access_token'])
-    user_id = user_data.user.id
+    try:
+        user_data = supabase.auth.get_user(access_token)
+        user_id = user_data.user.id
 
-    # 이미 등록된 사용자인지 검색
-    existing_user = supabase.table('users').select('*').eq('user_id', user_id).eq('oauth_provider', 'google').execute()
+        # 이미 등록된 사용자인지 검색
+        existing_user = supabase.table('users').select('*').eq('user_id', user_id).eq('oauth_provider', 'google').execute()
 
-    if not existing_user.data:
-        # 새 사용자인 경우 DB에 추가
-        email = user_data.user.email
-        dummy_password = str(uuid.uuid4()) # 임의의 비밀번호 생성
-        hashed_password = make_password(dummy_password)
+        if not existing_user.data:
+            # 새 사용자인 경우 DB에 추가
+            email = user_data.user.email
+            dummy_password = str(uuid.uuid4()) # 임의의 비밀번호 생성
+            hashed_password = make_password(dummy_password)
 
-        user_info = {
-            'user_id': user_id,
-            'email': email,
-            'password': hashed_password,
-            'oauth_provider': 'google',
-            'full_name': user_data.user.user_metadata.get('full_name', ''),
-            'created_at': timezone.now().isoformat(timespec='milliseconds').replace('+00:00', 'Z')
-        }
-        result = supabase.table('users').insert(user_info).execute()
-        user_id = result.data[0]['user_id']
-    else:
-        user_id = existing_user.data[0]['user_id']
+            user_info = {
+                'user_id': user_id,
+                'email': email,
+                'password': hashed_password,
+                'oauth_provider': 'google',
+                'full_name': user_data.user.user_metadata.get('full_name', ''),
+                'created_at': timezone.now().isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+            }
+            result = supabase.table('users').insert(user_info).execute()
+            user_id = result.data[0]['user_id']
+        else:
+            user_id = existing_user.data[0]['user_id']
 
-    # JWT 토큰 생성, for_user 메서드 사용하지 않고 수동으로 정보 추가
-    refresh = RefreshToken()
-    refresh['user_id'] = user_id
-    refresh.set_exp(lifetime=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'])
-    access_token = refresh.access_token
-    access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
-    
-    # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
-    response = Response({'message': '로그인 되었습니다.'}, status=status.HTTP_200_OK)
-    response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
-    response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=True, max_age=86400)
-    return response
+        # JWT 토큰 생성, for_user 메서드 사용하지 않고 수동으로 정보 추가
+        refresh = RefreshToken()
+        refresh['user_id'] = user_id
+        refresh.set_exp(lifetime=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'])
+        access_token = refresh.access_token
+        access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
+        
+        print("토큰 생성함")
+        # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
+        response = Response({'message': '로그인 되었습니다.'}, status=status.HTTP_200_OK)
+        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
+        response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=True, max_age=86400)
+        return response
+    except:
+        return Response({'error': f'로그인 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['POST'])
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def token_refresh(request):
-    refresh_token = request.data.get('refresh_token')
+    refresh_token = request.COOKIES.get('refresh_token')
     if not refresh_token:
         return Response({'error': '리프레시 토큰이 제공되지 않았습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -118,6 +112,7 @@ def is_password_valid(password):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def register(request):
     try:
         email = request.data.get('email')
@@ -175,6 +170,7 @@ def register(request):
         return Response({'error': f'회원가입 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def login(request):
     try:
         email = request.data.get('email')
@@ -207,13 +203,13 @@ def login(request):
     except:
         return Response({'error': f'로그인 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@api_view(['GET'])
 def logout(request):
     try:
-        refresh_token = request.data.get('refresh_token')
-        refresh = RefreshToken(refresh_token)
-        refresh.blacklist()
+        refresh_token = request.COOKIES.get('refresh_token')
+        if refresh_token:
+            refresh = RefreshToken(refresh_token)
+            refresh.blacklist()
 
         # 쿠키에서 jwt 토큰 삭제
         response = Response({'message': '로그아웃 되었습니다.'}, status=status.HTTP_200_OK)
@@ -229,7 +225,6 @@ def logout(request):
 # HttpOnly 속성으로 인해 프론트엔드에서 쿠키에 직접 접근할 수 없음
 # 로그인 상태를 확인하기 위해 인증이 필요한 엔드포인트에 요청을 보내어 확인함, 응답에 따라 프론트엔드에서 로그인 상태를 업데이트함
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def user_info(request):
     try:
         user = request.user
