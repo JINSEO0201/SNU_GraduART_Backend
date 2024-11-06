@@ -65,7 +65,7 @@ def get_cart_items(request):
             items_data.append({
                 'item_id': item['item_id'],
                 'title': item['title'],
-                'artist': artists_dict[item['artist_id']]['name'] if item['artist_id'] in artists_dict else None,
+                'name': artists_dict[item['artist_id']]['name'] if item['artist_id'] in artists_dict else None,
                 'description': item['description'],
                 'image_original': images_dict[item['item_id']]['image_original'] if item['item_id'] in images_dict else None,
                 'image_square': images_dict[item['item_id']]['image_square'] if item['item_id'] in images_dict else None,
