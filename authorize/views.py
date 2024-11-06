@@ -28,7 +28,6 @@ def google_login(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def google_callback(request):
-    # /api/v1/auth/google/callback#access_token=xxx&expires_at=xxx&expires_in=xxx&provider_token=xxx&refresh_token=xxx&token_type=bearer
     access_token = request.data.get('access_token')
     
     if not access_token:
@@ -68,7 +67,6 @@ def google_callback(request):
         access_token = refresh.access_token
         access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
         
-        print("토큰 생성함")
         # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
         response = Response({'message': '로그인 되었습니다.'}, status=status.HTTP_200_OK)
         response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
@@ -79,7 +77,6 @@ def google_callback(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 def token_refresh(request):
     refresh_token = request.COOKIES.get('refresh_token')
     if not refresh_token:

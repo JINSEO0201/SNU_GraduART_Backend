@@ -38,7 +38,7 @@ def get_items(request):
       item_data = {
         'item_id': item['item_id'],
         'title': item['title'],
-        'artist_name': artists_dict[item['artist_id']]['name'] if item['artist_id'] in artists_dict else None,
+        'name': artists_dict[item['artist_id']]['name'] if item['artist_id'] in artists_dict else None,
         'size': item['size'],
         'material': item['material'],
         'image_original': images_dict[item['item_id']]['image_original'] if item['item_id'] in images_dict else None,

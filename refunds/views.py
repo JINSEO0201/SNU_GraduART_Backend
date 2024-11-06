@@ -9,8 +9,8 @@ from django.utils import timezone
 
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
-@api_view(['GET'])
-def request_refund(request, item_id):
+@api_view(['POST'])
+def request_refund(request):
     user_id = request.user.user_id
     item_id = request.data.get('item_id')
     phone_number = request.data.get('phone_number')

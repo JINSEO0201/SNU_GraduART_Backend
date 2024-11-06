@@ -8,12 +8,12 @@ from django.utils import timezone
 # Supabase 클라이언트 설정
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
-@api_view(['GET'])
-def insert_cart(request, item_id):
+@api_view(['POST'])
+def insert_cart(request):
     try:
         # 사용자 정보와 상품 정보 가져오기
         user_id = request.user.user_id
-        item_id = str(item_id)
+        item_id = request.data.get('item_id')
 
         # 이미 장바구니에 있는지 확인
         cart_items = supabase.table('cart_item').select('item_id').eq('user_id', user_id).eq('item_id', item_id).execute()
@@ -65,7 +65,7 @@ def get_cart_items(request):
             items_data.append({
                 'item_id': item['item_id'],
                 'title': item['title'],
-                'artist': artists_dict[item['artist_id']]['name'] if item['artist_id'] in artists_dict else None,
+                'name': artists_dict[item['artist_id']]['name'] if item['artist_id'] in artists_dict else None,
                 'description': item['description'],
                 'image_original': images_dict[item['item_id']]['image_original'] if item['item_id'] in images_dict else None,
                 'image_square': images_dict[item['item_id']]['image_square'] if item['item_id'] in images_dict else None,
