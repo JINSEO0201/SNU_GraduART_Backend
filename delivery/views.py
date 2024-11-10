@@ -33,31 +33,6 @@ def get_delivery_status(request):
 
   except:
     return Response("error: 배송 조회 실패", status=status.HTTP_400_BAD_REQUEST)
-  
-def get_order_info(request):
-  try:
-    user_id = request.user.user_id
-    purchased_id = request.data.get("purchased_id")
-
-    purchased_info = supabase.table("purchased").select("*").eq("purchased_id", purchased_id).execute()
-
-    #유저 검증
-    if user_id != purchased_info[0]['user_id']:
-      return Response("error: 권한 없음", status=status.HTTP_401_UNAUTHORIZED)
-    
-    #order_info 테이블 불러오기
-    order_info = supabase.table("order_info").select("*").eq("id", purchased_info[0]['order_id']).execute()
-
-
-    #데이터 정리
-    final_result = {
-      ""
-    }
-  
-    
-
-  except:
-    return Response("error: 주문 상세 조회 실패", status=status.HTTP_400_BAD_REQUEST)
 
 
 #purchased table은 구매한 각 물건에 대응되고, 
