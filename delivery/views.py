@@ -17,7 +17,7 @@ def get_delivery_status(request):
     purchased_id = request.data.get("purchased_id")
 
     #유저 검증
-    user_requested = supabase.table("purchased").select("user_id").eq("purchased_id", purchased_id).execute()
+    user_requested = supabase.table("purchased").select("user_id").eq("id", purchased_id).execute()
     if user_id != user_requested[0]['user_id']:
       return Response("error: 권한 없음", status=status.HTTP_401_UNAUTHORIZED)
 

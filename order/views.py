@@ -14,7 +14,7 @@ def get_order_info(request):
     user_id = request.user.user_id
     purchased_id = request.data.get("purchased_id")
 
-    purchased_info = supabase.table("purchased").select("*").eq("purchased_id", purchased_id).execute()
+    purchased_info = supabase.table("purchased").select("*").eq("id", purchased_id).execute()
 
     #유저 검증
     if user_id != purchased_info[0]['user_id']:
