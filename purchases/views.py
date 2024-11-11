@@ -29,6 +29,9 @@ def get_purchases(request):
                 'total_price': purchase['total_price'],
             })
 
+        #TODO
+        #각 구매기록에 대해서 2주가 지나면 자동으로 구매확정하는 코드
+
         return Response(purchased_list)
     except:
         return Response({'error': '구매 내역 조회 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
