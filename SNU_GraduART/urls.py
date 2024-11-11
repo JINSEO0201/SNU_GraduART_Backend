@@ -25,5 +25,4 @@ urlpatterns = [
     path('api/v1/refunds/', include('refunds.urls')),
     path('api/v1/items/', include('items.urls')),
     path('api/v1/delivery/', include('delivery.urls')),
-    path('api/v1/order/', include('order.urls')),
 ]
