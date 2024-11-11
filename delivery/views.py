@@ -26,8 +26,8 @@ def get_delivery_status(request):
     tracking_num = delivery_info[0]["tracking_num"]
     courier_name = delivery_info[0]["courier_name"]
 
-    #구글 배송조회 url
-    redirect_url = f"https://www.google.com/search?q={courier_name}+{tracking_num}"
+    #네이버 배송조회 url
+    redirect_url = f"https://search.naver.com/search.naver?query={courier_name}{tracking_num}"
 
     return Response({redirect_url}, status=status.HTTP_200_OK)
 
