@@ -14,15 +14,15 @@ def get_delivery_status(request):
   try:
     #사용자 정보와 결제 내역 가져오기
     user_id = request.user.user_id
-    purchased_id = request.data.get("purchased_id")
+    item_id = request.data.get("item_id")
 
     #유저 검증
-    user_requested = supabase.table("purchased").select("user_id").eq("id", purchased_id).execute()
-    if user_id != user_requested[0]['user_id']:
+    purchased_info = supabase.table("purchased").select("user_id", "id").eq("item_id", item_id).execute()
+    if user_id != purchased_info[0]['user_id']:
       return Response("error: 권한 없음", status=status.HTTP_401_UNAUTHORIZED)
 
     #운송장 번호 가져오기
-    delivery_info = supabase.table("delivery").select("tracking_num", "courier_name").eq("purchased_id", purchased_id).execute()
+    delivery_info = supabase.table("delivery").select("tracking_num", "courier_name").eq("purchased_id", purchased_info[0]["id"]).execute()
     tracking_num = delivery_info[0]["tracking_num"]
     courier_name = delivery_info[0]["courier_name"]
 
