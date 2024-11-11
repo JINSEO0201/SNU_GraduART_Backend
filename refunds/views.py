@@ -5,6 +5,8 @@ from django.conf import settings
 from supabase import create_client, Client
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime
 from django.utils import timezone
 
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
@@ -13,33 +15,48 @@ supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 def request_refund(request):
     user_id = request.user.user_id
     item_id = request.data.get('item_id')
-    phone_number = request.data.get('phone_number')
 
-    # Supabase에서 구매내역 조회
+    # 구매내역 조회
     purchased = supabase.table('purchased').select('*').eq('user_id', user_id).eq('item_id', item_id).execute()
-    # Supabase에서 상품 정보 조회
+    if not purchased.data:
+        return Response({'error': '구매 내역이 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # 주문 상세정보 조회
+    order_id = purchased.data[0]['order_id']
+    order_info = supabase.table('order_info').select('*').eq('id', order_id).execute()
+    if not order_info.data:
+        return Response({'error': '주문 정보가 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # 작품정보 조회
     item = supabase.table('items').select('*').eq('item_id', item_id).execute()
+    if not item.data:
+        return Response({'error': '상품 정보가 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
     # 이메일 전송 포맷
-    subject = "환불 요청"
+    subject = f"[GraduArt] 환불 요청 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     body = f"""
     사용자 ID: {user_id}
+    사용자명: {order_info.data[0]['name']}
+    전화번호: {order_info.data[0]['phone_num']}
+    이메일: {order_info.data[0]['email']}
+    ---------------------------------------------
+    주문 날짜: {order_info.data[0]['created_at']}
+    결제 방법: {order_info.data[0]['payment_method']}
+    주문 ID: {order_id}
+    총 가격: {order_info.data[0]['total_price']}
+    ---------------------------------------------
     상품 ID: {item_id}
-    주문 날짜: {purchased.data[0]['created_at']}
     제목: {item.data[0]['title']}
-    아티스트: {item.data[0]['artist']}
-    설명: {item.data[0]['descriptions']}
+    아티스트 ID: {item.data[0]['artist_id']}
     가격: {item.data[0]['price']}
-    결제 방법: {purchased.data[0]['payment_method']}
-    주문 ID: {purchased.data[0]['order_id']}
-    총 가격: {purchased.data[0]['total_price']}
-    전화번호: {phone_number}
     """
 
-    msg = MIMEText(body)
+    msg = MIMEMultipart(body)
     msg['Subject'] = subject
     msg['From'] = settings.EMAIL_HOST_USER
     msg['To'] = settings.ADMIN_EMAIL
+
+    msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
     try:
         # 이메일을 보냄
@@ -48,15 +65,14 @@ def request_refund(request):
             server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
             server.send_message(msg)
 
-        # refund_request 테이블에 환불 요청 정보 저장
-        # 왜 별도의 DB에 또 저장하냐 => 이 DB는 관리자가 환불 요청을 확인할 때 사용 (슬랙 알림 등 연결 가능)
+        # refund_request 테이블에 환불 요청 정보 저장 => 이 테이블은 관리자가 환불 요청을 확인할 때 사용 (슬랙 알림 등 연결 가능)
         refund_info = {
             'user_id': user_id,
             'item_id': item_id,
             'created_at': timezone.now().isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
-            'order_id': purchased.data[0]['order_id'],
+            'order_id': order_id,
         }
-        result = supabase.table('refund_request').insert(refund_info).execute()
+        supabase.table('refund_request').insert(refund_info).execute()
 
         return Response({'message': '환불 요청이 성공적으로 접수되었습니다.'}, status=status.HTTP_200_OK)
     except:
