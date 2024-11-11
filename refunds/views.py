@@ -40,7 +40,7 @@ def request_refund(request):
     전화번호: {order_info.data[0]['phone_num']}
     이메일: {order_info.data[0]['email']}
     ---------------------------------------------
-    주문 날짜: {order_info.data[0]['created_at']}
+    주문 날짜: {purchased.data[0]['created_at']}
     결제 방법: {order_info.data[0]['payment_method']}
     주문 ID: {order_id}
     총 가격: {order_info.data[0]['total_price']}
