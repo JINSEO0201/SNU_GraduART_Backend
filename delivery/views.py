@@ -16,15 +16,19 @@ def get_delivery_status(request, item_id):
     user_id = request.user.user_id
     item_id = str(item_id)
 
+    print(f"user_id: {user_id}, item_id: {item_id}")
+
     # 구매 내역 조회
     purchased_info = supabase.table("purchased").select("*").eq("user_id", user_id).eq("item_id", item_id).execute()
-    if not purchased_info:
+    if not purchased_info.data:
       return Response("error: 구매 내역이 없습니다.", status=status.HTTP_400_BAD_REQUEST)
-
+  
     # 운송장 번호 가져오기
-    delivery_info = supabase.table("delivery").select("tracking_num", "courier_name").eq("purchased_id", purchased_info[0]["id"]).execute()
-    tracking_num = delivery_info[0]["tracking_num"]
-    courier_name = delivery_info[0]["courier_name"]
+    purchased_id = purchased_info.data[0]["id"]
+    print(f"purchased_id: {purchased_id}")
+    delivery_info = supabase.table("delivery").select("tracking_num", "courier_name").eq("purchased_id", purchased_id).execute()
+    tracking_num = delivery_info.data[0]["tracking_num"]
+    courier_name = delivery_info.data[0]["courier_name"]
 
     # 네이버 배송조회 url
     redirect_url = f"https://search.naver.com/search.naver?query={courier_name}{tracking_num}"
