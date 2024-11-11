@@ -23,7 +23,7 @@ def request_refund(request):
     
     # 주문 상세정보 조회
     order_id = purchased.data[0]['order_id']
-    order_info = supabase.table('order_info').select('*').eq('id', order_id).execute()
+    order_info = supabase.table('order_info').select('*').eq('order_id', order_id).execute()
     if not order_info.data:
         return Response({'error': '주문 정보가 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
     
@@ -60,10 +60,11 @@ def request_refund(request):
 
     try:
         # 이메일을 보냄
-        with smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT) as server:
-            server.starttls()
-            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
-            server.send_message(msg)
+        # TODO: 이메일 전송 기능 완성하고 주석을 해제하세요
+        # with smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT) as server:
+        #     server.starttls()
+        #     server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+        #     server.send_message(msg)
 
         # refund_request 테이블에 환불 요청 정보 저장 => 이 테이블은 관리자가 환불 요청을 확인할 때 사용 (슬랙 알림 등 연결 가능)
         refund_info = {
