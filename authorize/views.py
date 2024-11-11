@@ -77,6 +77,7 @@ def google_callback(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def token_refresh(request):
     refresh_token = request.COOKIES.get('refresh_token')
     if not refresh_token:
