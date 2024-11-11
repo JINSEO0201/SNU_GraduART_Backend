@@ -2,7 +2,6 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 import json
-import os
 import requests
 from supabase import create_client, Client
 import time
@@ -19,20 +18,62 @@ def get_purchases(request):
         user_id = request.user.user_id
         purchased = supabase.table('purchased').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
 
-        # 결과 재구성
+        if not purchased.data:
+            return Response([], status=status.HTTP_200_OK)
+
+        # 구매한 상품 정보 조회
+        item_ids = [purchase['item_id'] for purchase in purchased.data]
+        items = supabase.table('items').select('*').in_('item_id', item_ids).execute()
+        item_dict = {item['item_id']: item for item in items.data}
+        
+        item_images = supabase.table('item_images').select('id, image_original').in_('id', item_ids).execute()
+        item_images_dict = {image['id']: image['image_original'] for image in item_images.data}
+
+        authors = supabase.table('authors').select('id, name').execute()
+        authors_dict = {author['id']: author['name'] for author in authors.data}
+
+        # 결과 재구성 (마이페이지에 들어갈 내용들)
         purchased_list = []
         for purchase in purchased.data:
+            item = item_dict.get(purchase['item_id'])
+            if not item:
+                continue
+
             purchased_list.append({
-                'order_id': purchase['order_id'],
                 'item_id': purchase['item_id'],
-                'payment_method': purchase['payment_method'],
-                'total_price': purchase['total_price'],
+                'image_original': item_images_dict.get(purchase['item_id']),
+                'title': item['title'],
+                'name': authors_dict.get(item['author_id']),
+                'size': item['size'],
+                'material': item['material'],
+                'price': item['price'],
+                'refund': purchase['refund'],
+                'is_confirmed': purchase['is_confirmed'],
             })
 
-        #TODO
-        #각 구매기록에 대해서 2주가 지나면 자동으로 구매확정하는 코드
+        return Response(purchased_list, status=status.HTTP_200_OK)
+    except:
+        return Response({'error': '구매 내역 조회 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+@api_view(['GET'])
+def get_purchase_detail(request, item_id):
+    try:
+        # 사용자 ID + item_id로 주문/결제 상세 정보 조회
+        user_id = request.user.user_id
+        item_id = str(item_id)
 
-        return Response(purchased_list)
+        purchase = supabase.table('purchased').select('order_id').eq('user_id', user_id).eq('item_id', item_id).execute()
+
+        if not purchase.data:
+            return Response({'error': '구매 내역을 찾을 수 없습니다'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # 추가적인 주문 정보 리턴
+        order_id = purchase.data[0]['order_id']
+        order_info = supabase.table('order_info').select('address', 'name', 'phone_num', 'email', 'payment_method', 'total_price').eq('id', order_id).execute()
+
+        # 결과 재구성
+        order_info = order_info.data[0] if order_info.data else {}
+        return Response(order_info, status=status.HTTP_200_OK)
     except:
         return Response({'error': '구매 내역 조회 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
