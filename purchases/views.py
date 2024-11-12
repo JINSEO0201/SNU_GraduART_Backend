@@ -1,8 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-import json
-import os
 import requests
 from supabase import create_client, Client
 import time
@@ -11,6 +9,8 @@ from django.conf import settings
 
 # Supabase 클라이언트 설정
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+PAYREADY_URL = 'https://open-api.kakaopay.com/online/v1/payment/ready'
+PAYAPPROVE_URL = 'https://open-api.kakaopay.com/online/v1/payment/approve'
 
 @api_view(['GET'])
 def get_purchases(request):
@@ -19,45 +19,89 @@ def get_purchases(request):
         user_id = request.user.user_id
         purchased = supabase.table('purchased').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
 
-        # 결과 재구성
+        if not purchased.data:
+            return Response([], status=status.HTTP_200_OK)
+
+        # 구매한 상품 정보 조회
+        item_ids = [purchase['item_id'] for purchase in purchased.data]
+        items = supabase.table('items').select('*').in_('item_id', item_ids).execute()
+        item_dict = {item['item_id']: item for item in items.data}
+        
+        item_images = supabase.table('item_images').select('id, image_original').in_('id', item_ids).execute()
+        item_images_dict = {image['id']: image['image_original'] for image in item_images.data}
+
+        authors = supabase.table('artists').select('id, name').execute()
+        authors_dict = {author['id']: author['name'] for author in authors.data}
+
+        # 결과 재구성 (마이페이지에 들어갈 내용들)
         purchased_list = []
         for purchase in purchased.data:
+            item = item_dict.get(purchase['item_id'])
+            if not item:
+                continue
+
             purchased_list.append({
-                'order_id': purchase['order_id'],
-                'item_id': purchase['item_id'],
-                'payment_method': purchase['payment_method'],
-                'total_price': purchase['total_price'],
+                'item_id': item['item_id'],
+                'image_original': item_images_dict.get(item['item_id']),
+                'title': item['title'],
+                'name': authors_dict.get(item['artist_id']),
+                'size': item['size'],
+                'material': item['material'],
+                'price': item['price'],
+                'refund': purchase['refund'],
+                'is_confirmed': purchase['is_confirmed'],
             })
 
-        #TODO
-        #각 구매기록에 대해서 2주가 지나면 자동으로 구매확정하는 코드
+        return Response(purchased_list, status=status.HTTP_200_OK)
+    except:
+        return Response({'error': '구매 내역 조회 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+@api_view(['GET'])
+def get_purchase_detail(request, item_id):
+    try:
+        # 사용자 ID + item_id로 주문/결제 상세 정보 조회
+        user_id = request.user.user_id
+        item_id = str(item_id)
 
-        return Response(purchased_list)
+        purchase = supabase.table('purchased').select('order_id').eq('user_id', user_id).eq('item_id', item_id).execute()
+
+        if not purchase.data:
+            return Response({'error': '구매 내역을 찾을 수 없습니다'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # 추가적인 주문 정보 리턴
+        order_id = purchase.data[0]['order_id']
+        order_info = supabase.table('order_info').select('address', 'name', 'phone_num', 'email', 'payment_method', 'total_price').eq('order_id', order_id).execute()
+
+        # 결과 재구성
+        order_info = order_info.data[0] if order_info.data else {}
+        return Response(order_info, status=status.HTTP_200_OK)
     except:
         return Response({'error': '구매 내역 조회 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def prepare_purchase(request):
     try:
-        data = json.loads(request.body)
         user_id = request.user.user_id
-        item_ids = data.get('item_ids')
+        item_ids = request.data.get('item_ids')
 
         if not isinstance(item_ids, list):
             return Response({'error': '유효하지 않은 요청 본문'}, status=status.HTTP_400_BAD_REQUEST)
 
         total_price = 0
         item_names = []
-        item_codes = []
 
         # 상품 정보 조회, total_price 계산
         for item_id in item_ids:
-            item = fetch_item_details(item_id)
+            item = supabase.table('items').select('*').eq('item_id', item_id).execute()
+            if not item.data:
+                return Response({'error': f'상품 {item_id}를 찾을 수 없습니다'}, status=status.HTTP_400_BAD_REQUEST)
+
+            item = item.data[0]
             if not item['onSale']:
-                return Response({'error': f'상품 {item["item_id"]}는 판매 중이 아닙니다'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': f'상품 <{item['title']}>는 판매 중이 아닙니다'}, status=status.HTTP_400_BAD_REQUEST)
+            
             total_price += item['price']
             item_names.append(item['title'])
-            item_codes.append(str(item['num_code']))
 
         item_name = ', '.join(item_names[:3])
         if len(item_names) > 3:
@@ -66,7 +110,7 @@ def prepare_purchase(request):
         order_id = f"{user_id}_{int(time.time())}"
 
         payment_response = requests.post(
-            'https://open-api.kakaopay.com/online/v1/payment/ready',
+            PAYREADY_URL,
             headers={
                 'Authorization': f"SECRET_KEY {settings.KAKAO_API_KEY}",
                 'Content-Type': 'application/json',
@@ -76,7 +120,7 @@ def prepare_purchase(request):
                 'partner_order_id': order_id,
                 'partner_user_id': user_id,
                 'item_name': item_name,
-                'item_code': ','.join(item_codes),
+                'item_code': ','.join(item_ids),
                 'quantity': len(item_ids),
                 'total_amount': total_price,
                 'tax_free_amount': 0,
@@ -85,8 +129,18 @@ def prepare_purchase(request):
                 'cancel_url': f"{settings.FRONT_URL}/purchaseFail",
             }
         )
+        if payment_response.status_code != 200:
+            return Response({'error': f'결제 준비 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         payment_result = payment_response.json()
+
+        # 결제 관련 정보를 db에 일시적으로 저장 (데이터 신뢰성 확보, 추후 approval 시 검증 용도)
+        supabase.table('payment_temporary_data').insert({
+            'order_id': order_id,
+            'user_id': user_id,
+            'tid': payment_result['tid'],
+        }).execute()
+        
         return Response(payment_result)
 
     except:
@@ -95,14 +149,25 @@ def prepare_purchase(request):
 @api_view(['POST'])
 def approve_purchase(request):
     try:
-        data = json.loads(request.body)
-        oid = data.get('oid')
-        tid = data.get('tid')
+        # 결제 관련 정보 가져오기
+        oid = request.data.get('oid')
+        pg_token = request.data.get('pg_token')
+        
+        # 사용자 정보 가져오기
         user_id = request.user.user_id
-        pg_token = data.get('pg_token')
+        address = request.data.get('address')
+        name = request.data.get('name')
+        phone_num = request.data.get('phone_num')
+        email = request.data.get('email')
 
-        if not all([oid, tid, pg_token]):
+        if not all([oid, pg_token]):
             return Response({'error': '유효하지 않은 요청 본문'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # tid 값 가져오기 (데이터 신뢰성을 위해 client로부터 받지 않고 db에서 가져옴)
+        payment_temporary_data = supabase.table('payment_temporary_data').select('*').eq('order_id', oid).eq('user_id', user_id).execute()
+        if not payment_temporary_data.data:
+            return Response({'error': '유효하지 않은 결제 정보'}, status=status.HTTP_400_BAD_REQUEST)
+        tid = payment_temporary_data.data[0]['tid']
 
         approval_response = requests.post(
             'https://open-api.kakaopay.com/online/v1/payment/approve',
@@ -118,49 +183,46 @@ def approve_purchase(request):
                 'pg_token': pg_token
             }
         )
-
         approval_result = approval_response.json()
 
         product_codes = approval_result['item_code'].split(',')
-        for num_code in product_codes:
-            item = update_item_by_code(num_code)
-            if item:
-                insert_purchase(item, user_id, approval_result['payment_method_type'],
-                                oid, approval_result.get('card_info'),
-                                approval_result['amount']['total'], item['price'])
-                delete_cart_item(item['item_id'], user_id)
 
-        return Response(approval_result)
+        # order_info table에 데이터 추가
+        supabase.table('order_info').insert({
+            'order_id': oid,
+            'transaction_id': tid,
+            'address': address,
+            'name': name,
+            'phone_num': phone_num,
+            'email': email,
+            'payment_method': approval_result['payment_method_type'],
+            'total_price': approval_result['amount']['total'],
+            'card_info': approval_result.get('card_info'),
+        }).execute()
+
+        for item_id in product_codes:
+            # item's onSale status를 false로 변경
+            result = supabase.table('items').update({'onSale': False}).eq('item_id', item_id).execute()
+            if not result.data:
+                return Response({'error: 상품 정보 업데이트 실패'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # purchased table에 데이터 추가
+            supabase.table('purchased').insert({
+                'order_id': oid,
+                'user_id': user_id,
+                'item_id': item_id,
+                'created_at': timezone.now().isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
+                'refund': False,
+                'is_confirmed': False,
+            }).execute()
+
+            # 장바구니에서 삭제
+            supabase.table('cart_item').delete().match({'item_id': item_id, 'user_id': user_id}).execute()
+
+        # 결제 관련 임시 정보 삭제
+        supabase.table('payment_temporary_data').delete().eq('order_id', oid).eq('user_id', user_id).execute()
+
+        return Response({'message': '결제가 성공적으로 완료되었습니다'}, status=status.HTTP_200_OK)
 
     except:
         return Response({'error': f'결제 승인 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-def fetch_item_details(item_id):
-    result = supabase.table('items').select('*').eq('item_id', item_id).execute()
-    if result.data:
-        return result.data[0]
-    raise Exception(f'상품 {item_id}를 찾을 수 없습니다')
-
-def update_item_by_code(code):
-    result = supabase.table('items').update({'onSale': False}).eq('num_code', int(code)).execute()
-    return result.data[0] if result.data else None
-
-def insert_purchase(item, user_id, pay_type, order_id, card_info, total_price, single_price):
-    supabase.table('purchased').insert({
-        'user_id': user_id,
-        'item_id': item['item_id'],
-        'title': item['title'],
-        'artist': item['artist'],
-        'descriptions': item['descriptions'],
-        'imagePath': item['imagePath'],
-        'payment_method': pay_type,
-        'order_id': order_id,
-        'card_info': card_info,
-        'total_price': int(total_price),
-        'price': int(single_price),
-        'refund': False,
-        'created_at': timezone.now().isoformat(timespec='milliseconds').replace('+00:00', 'Z')
-    }).execute()
-
-def delete_cart_item(item_id, user_id):
-    supabase.table('cart_item').delete().match({'item_id': item_id, 'user_id': user_id}).execute()
