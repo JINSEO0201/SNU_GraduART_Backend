@@ -16,8 +16,6 @@ def get_delivery_status(request, item_id):
     user_id = request.user.user_id
     item_id = str(item_id)
 
-    print(f"user_id: {user_id}, item_id: {item_id}")
-
     # 구매 내역 조회
     purchased_info = supabase.table("purchased").select("*").eq("user_id", user_id).eq("item_id", item_id).execute()
     if not purchased_info.data:
@@ -25,7 +23,6 @@ def get_delivery_status(request, item_id):
   
     # 운송장 번호 가져오기
     purchased_id = purchased_info.data[0]["id"]
-    print(f"purchased_id: {purchased_id}")
     delivery_info = supabase.table("delivery").select("tracking_num", "courier_name").eq("purchased_id", purchased_id).execute()
     tracking_num = delivery_info.data[0]["tracking_num"]
     courier_name = delivery_info.data[0]["courier_name"]
