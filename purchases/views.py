@@ -98,7 +98,7 @@ def prepare_purchase(request):
 
             item = item.data[0]
             if not item['onSale']:
-                return Response({'error': f'상품 <{item['title']}>는 판매 중이 아닙니다'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': f"상품 <{item['title']}>는 판매 중이 아닙니다"}, status=status.HTTP_400_BAD_REQUEST)
             
             total_price += item['price']
             item_names.append(item['title'])
