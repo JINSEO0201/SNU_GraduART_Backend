@@ -8,7 +8,7 @@ from django.conf import settings
 # Supabase 클라이언트 설정
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
-DEPARTMENT_LIST = ['Design', 'MediaArts', 'Sculpture', 'Craft', 'Oriental Painting', 'Western Painting']
+DEPARTMENT_LIST = ['Design', 'MediaArts', 'Sculpture', 'Craft', 'Oriental Painting', 'Western Painting', 'Metal', 'Ceramic']
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
