@@ -5,6 +5,7 @@ import requests
 from supabase import create_client, Client
 import time
 from django.utils import timezone
+from datetime import datetime, timedelta
 from django.conf import settings
 
 # Supabase 클라이언트 설정
@@ -32,6 +33,20 @@ def get_purchases(request):
 
         authors = supabase.table('artists').select('id, name').execute()
         authors_dict = {author['id']: author['name'] for author in authors.data}
+
+        # 결제 2주 이후 구매확정
+        try:
+            two_weeks = timedelta(days=14)
+            now = timezone.now()
+
+            for record in purchased.data:
+                created_at_datetime = datetime.fromisoformat(record["created_at"].replace("Z", "+00:00"))
+                if now - created_at_datetime >= two_weeks:
+                    item_id = record["item_id"]
+                    record["is_confirmed"] = True
+                    response = supabase.table("purchased").update({"is_confirmed" : True}).eq("item_id", item_id).execute()
+        except:
+            pass
 
         # 결과 재구성 (마이페이지에 들어갈 내용들)
         purchased_list = []
