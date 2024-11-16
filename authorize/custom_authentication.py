@@ -5,7 +5,7 @@ from rest_framework import exceptions
 from .custom_user import CustomUser
 from supabase import create_client
 from django.conf import settings
-
+from rest_framework.permissions import AllowAny
 # Initialize Supabase client
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
@@ -21,9 +21,13 @@ class CustomJWTAuthentication(JWTAuthentication):
         if raw_token is None:
             return None
         
-        validated_token = self.get_validated_token(raw_token)
-        user = self.get_user(validated_token)
-        return (user, validated_token)
+        try:
+            validated_token = self.get_validated_token(raw_token)
+            user = self.get_user(validated_token)
+            return (user, validated_token)
+        except exceptions.AuthenticationFailed:
+            # Return None to indicate authentication failure without raising an exception
+            return None
 
     def get_user(self, validated_token):
         try:
