@@ -21,6 +21,10 @@ def request_refund(request):
     if not purchased.data:
         return Response({'error': '구매 내역이 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
     
+    # 구매 확정 여부 판단
+    if purchased.data[0]['is_confirmed']:
+        return Response({'error': '구매확정 완료된 주문 건입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
     # 주문 상세정보 조회
     order_id = purchased.data[0]['order_id']
     order_info = supabase.table('order_info').select('*').eq('order_id', order_id).execute()
@@ -50,21 +54,23 @@ def request_refund(request):
     아티스트 ID: {item.data[0]['artist_id']}
     가격: {item.data[0]['price']}
     """
+    sender = settings.EMAIL_HOST_USER
+    recipient = settings.ADMIN_EMAIL
 
-    msg = MIMEMultipart(body)
+    msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
-    msg['From'] = settings.EMAIL_HOST_USER
-    msg['To'] = settings.ADMIN_EMAIL
+    msg['From'] = sender
+    msg['To'] = recipient
 
     msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
     try:
         # 이메일을 보냄
-        # TODO: 이메일 전송 기능 완성하고 주석을 해제하세요
-        # with smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT) as server:
-        #     server.starttls()
-        #     server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
-        #     server.send_message(msg)
+        server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
+        server.starttls()
+        server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+        server.sendmail(sender, recipient, msg.as_string())
+        server.close()
 
         # refund_request 테이블에 환불 요청 정보 저장 => 이 테이블은 관리자가 환불 요청을 확인할 때 사용 (슬랙 알림 등 연결 가능)
         refund_info = {
