@@ -71,6 +71,7 @@ def get_cart_items(request):
                 'image_square': images_dict[item['item_id']]['image_square'] if item['item_id'] in images_dict else None,
                 'price': item['price'],
                 'onSale': item['onSale'],
+                'department': item['department'],
             })
         
         return Response(items_data, status=status.HTTP_200_OK)
