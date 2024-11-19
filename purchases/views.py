@@ -219,7 +219,7 @@ def approve_purchase(request):
                 return Response({'error: 상품 정보 업데이트 실패'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             # purchased table에 데이터 추가
-            supabase.table('purchased').insert({
+            purchased_result = supabase.table('purchased').insert({
                 'order_id': oid,
                 'user_id': user_id,
                 'item_id': item_id,
@@ -227,6 +227,9 @@ def approve_purchase(request):
                 'refund': False,
                 'is_confirmed': False,
             }).execute()
+
+            # 배송 테이블 생성
+            supabase.table('delivery').insert({'purchased_id': purchased_result.data[0]['id']}).execute()
 
             # 장바구니에서 삭제
             supabase.table('cart_item').delete().match({'item_id': item_id, 'user_id': user_id}).execute()
