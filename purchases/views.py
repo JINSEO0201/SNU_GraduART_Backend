@@ -86,6 +86,7 @@ def get_purchase_detail(request, item_id):
 
         # 결과 재구성
         order_info = order_info.data[0] if order_info.data else {}
+        order_info['created_at'] = purchase.data[0]['created_at']
         return Response(order_info, status=status.HTTP_200_OK)
     except:
         return Response({'error': '구매 내역 조회 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
