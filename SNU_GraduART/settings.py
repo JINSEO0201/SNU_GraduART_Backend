@@ -175,10 +175,10 @@ KAKAO_CID = env('KAKAO_CID')
 FRONT_URL = env('FRONT_URL')
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    #"http://localhost:3000",
+    #"http://127.0.0.1:3000",
 ]
-CORS_ALLOW_CREDENTIALS = False
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     "accept",
     "authorization",
