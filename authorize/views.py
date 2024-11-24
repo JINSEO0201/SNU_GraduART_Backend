@@ -69,8 +69,8 @@ def google_callback(request):
         
         # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
         response = Response({'message': '로그인 되었습니다.'}, status=status.HTTP_200_OK)
-        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
-        response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=True, max_age=86400)
+        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=False, max_age=1800)
+        response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=False, max_age=86400)
         return response
     except:
         return Response({'error': f'로그인 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -91,7 +91,7 @@ def token_refresh(request):
 
         # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
         response = Response({'message': '토큰이 갱신되었습니다.'}, status=status.HTTP_200_OK)
-        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
+        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=False, max_age=1800)
         return response
     except TokenError:
         return Response({'error': '유효하지 않거나 만료된 토큰입니다.'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -159,8 +159,8 @@ def register(request):
 
             # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
             response = Response({'message': '회원가입 되었습니다.'}, status=status.HTTP_201_CREATED)
-            response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
-            response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=True, max_age=86400)
+            response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=False, max_age=1800)
+            response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=False, max_age=86400)
             return response
         else:
             return Response({'error': '회원가입 실패'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -195,8 +195,8 @@ def login(request):
 
         # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
         response = Response({'message': '로그인 되었습니다.'}, status=status.HTTP_200_OK)
-        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=True, max_age=1800)
-        response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=True, max_age=86400)
+        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=False, max_age=1800)
+        response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=False, max_age=86400)
         return response
     except:
         return Response({'error': f'로그인 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
