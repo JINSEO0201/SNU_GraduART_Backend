@@ -34,7 +34,7 @@ SECRET_KEY =env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '134.185.116.221']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '134.185.116.221'] # 백엔드 서버 주소 추가 필요
 
 # Application definition
 
@@ -95,7 +95,7 @@ WSGI_APPLICATION = 'SNU_GraduART.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3', # 인스턴스 내 persistent volume 경로로 추후 변경 필요
     }
 }
 
@@ -124,11 +124,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Seoul' # 한국 시간대로 변경
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -165,6 +165,8 @@ EMAIL_PORT = env('EMAIL_PORT', cast=int)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 ADMIN_EMAIL = env('ADMIN_EMAIL')
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_USE_TLS = True
 
 SUPABASE_URL = env('SUPABASE_URL')
 SUPABASE_KEY = env('SUPABASE_KEY')
@@ -177,7 +179,8 @@ FRONT_URL = env('FRONT_URL')
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://134.185.116.221",
+    "http://134.185.116.221", # 백엔드 서버 주소 추가 필요
+    "https://graduart.gallery",
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
@@ -189,4 +192,8 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
-CSRF_TRUSTED_ORIGINS = ['http://localhost:3000', 'http://134.185.116.221']
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://134.185.116.221', # 백엔드 서버 주소 추가 필요
+    "https://graduart.gallery",
+]
