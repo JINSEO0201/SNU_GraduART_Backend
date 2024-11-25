@@ -44,7 +44,8 @@ def get_purchases(request):
 
             # naive datetime을 aware datetime으로 변환 (Asia/Seoul 시간대)
             created_at_datetime_aware = seoul_tz.localize(created_at_datetime)  # timezone-aware로 변환
-            if now - created_at_datetime_aware >= two_weeks:
+            now_aware = seoul_tz.localize(now)
+            if now_aware - created_at_datetime_aware >= two_weeks:
                 item_id = record["item_id"]
                 record["is_confirmed"] = True
                 supabase.table("purchased").update({"is_confirmed" : True}).eq("item_id", item_id).execute()
