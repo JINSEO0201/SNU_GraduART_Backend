@@ -17,9 +17,15 @@ class CustomJWTAuthentication(JWTAuthentication):
     # 토큰이 유효하다면 get_user 메서드를 호출하여 사용자 정보를 가져온다.
     # 최종적으로 CustomUser 인스턴스와 토큰을 반환한다.
     def authenticate(self, request):
-        raw_token = request.COOKIES.get('access_token')
-        if raw_token is None:
-            return None
+        header = self.get_header(request)
+        if header is None:
+            raw_token = request.COOKIES.get('access_token')
+            if raw_token is None:
+                return None
+        else:
+            raw_token = self.get_raw_token(header)
+            if raw_token is None:
+                return None
         
         try:
             validated_token = self.get_validated_token(raw_token)

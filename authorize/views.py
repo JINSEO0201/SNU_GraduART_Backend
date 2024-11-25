@@ -67,19 +67,20 @@ def google_callback(request):
         access_token = refresh.access_token
         access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
         
-        # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
-        response = Response({'message': '로그인 되었습니다.'}, status=status.HTTP_200_OK)
-        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=False, max_age=1800)
-        response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=False, max_age=86400)
-        return response
+        response_data = {
+            'message': '로그인 되었습니다.',
+            'access_token': str(access_token),
+            'refresh_token': str(refresh),
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
     except:
         return Response({'error': f'로그인 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def token_refresh(request):
-    refresh_token = request.COOKIES.get('refresh_token')
+    refresh_token = request.data.get('refresh_token')
     if not refresh_token:
         return Response({'error': '리프레시 토큰이 제공되지 않았습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -89,10 +90,11 @@ def token_refresh(request):
         access_token = refresh.access_token
         access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
 
-        # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
-        response = Response({'message': '토큰이 갱신되었습니다.'}, status=status.HTTP_200_OK)
-        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=False, max_age=1800)
-        return response
+        response_data = {
+            'message': '토큰이 갱신되었습니다',
+            'access_token': str(access_token),
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
     except TokenError:
         return Response({'error': '유효하지 않거나 만료된 토큰입니다.'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -157,11 +159,12 @@ def register(request):
             access_token = refresh.access_token
             access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
 
-            # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
-            response = Response({'message': '회원가입 되었습니다.'}, status=status.HTTP_201_CREATED)
-            response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=False, max_age=1800)
-            response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=False, max_age=86400)
-            return response
+            response_data = {
+                'message': '회원가입 되었습니다.',
+                'access_token': str(access_token),
+                'refresh_token': str(refresh),
+            }
+            return Response(response_data, status=status.HTTP_201_CREATED)
         else:
             return Response({'error': '회원가입 실패'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except:
@@ -193,29 +196,38 @@ def login(request):
         access_token = refresh.access_token
         access_token.set_exp(lifetime=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'])
 
-        # jwt 토큰을 쿠키에 저장, 보안을 위해 파라미터 세팅, max_age 세팅함으로써 browser session 종료 시에도 유지
-        response = Response({'message': '로그인 되었습니다.'}, status=status.HTTP_200_OK)
-        response.set_cookie('access_token', value=str(access_token), httponly=True, samesite='Lax', secure=False, max_age=1800)
-        response.set_cookie('refresh_token', value=str(refresh), httponly=True, samesite='Lax', secure=False, max_age=86400)
-        return response
+        response_data = {
+            'message': '로그인 되었습니다.',
+            'access_token': str(access_token),
+            'refresh_token': str(refresh),
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
     except:
         return Response({'error': f'로그인 중 오류가 발생했습니다'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['GET'])
+@api_view(['POST'])
 def logout(request):
     try:
-        refresh_token = request.COOKIES.get('refresh_token')
-        if refresh_token:
-            refresh = RefreshToken(refresh_token)
-            refresh.blacklist()
+        refresh_token = request.data.get('refresh_token')
+        if not refresh_token:
+            return Response({
+                'error': '로그아웃 중 오류가 발생했습니다.',
+                'detail': 'refresh_token이 없습니다.'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        # 쿠키에서 jwt 토큰 삭제
-        response = Response({'message': '로그아웃 되었습니다.'}, status=status.HTTP_200_OK)
-        response.delete_cookie('access_token')
-        response.delete_cookie('refresh_token')
-        return response
-    except:
-        return Response({'error': '로그아웃 중 오류가 발생했습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        # 토큰을 블랙리스트에 등록함으로써 무효화
+        refresh = RefreshToken(refresh_token)
+        refresh.blacklist()
+
+        return Response({
+            'message': '로그아웃 되었습니다.',
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': '로그아웃 중 오류가 발생했습니다.',
+            'detail': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 # 왜 필요하냐?
