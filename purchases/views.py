@@ -35,15 +35,15 @@ def get_purchases(request):
         authors_dict = {author['id']: author['name'] for author in authors.data}
 
         # 결제 2주 이후 구매확정
-        #two_weeks = timedelta(days=14)
-        #now = timezone.now()
+        two_weeks = timedelta(days=14)
+        now = timezone.now()
 
-        #for record in purchased.data:
-        #    created_at_datetime = datetime.fromisoformat(record["created_at"].replace("Z", "+00:00"))
-        #    if now - created_at_datetime >= two_weeks:
-        #        item_id = record["item_id"]
-        #        record["is_confirmed"] = True
-        #        supabase.table("purchased").update({"is_confirmed" : True}).eq("item_id", item_id).execute()
+        for record in purchased.data:
+            created_at_datetime = datetime.fromisoformat(record["created_at"].replace("Z", "+00:00"))
+            if now - created_at_datetime >= two_weeks:
+                item_id = record["item_id"]
+                record["is_confirmed"] = True
+                supabase.table("purchased").update({"is_confirmed" : True}).eq("item_id", item_id).execute()
 
         # 결과 재구성 (마이페이지에 들어갈 내용들)
         purchased_list = []
@@ -231,6 +231,9 @@ def approve_purchase(request):
                 'refund': False,
                 'is_confirmed': False,
             }).execute()
+
+            # 배송 테이블 생성
+            supabase.table('delivery').insert({'purchased_id': purchased_result.data[0]['id']}).execute()
 
             # 장바구니에서 삭제
             supabase.table('cart_item').delete().match({'item_id': item_id, 'user_id': user_id}).execute()
