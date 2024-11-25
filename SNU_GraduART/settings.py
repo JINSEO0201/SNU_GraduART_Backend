@@ -34,7 +34,7 @@ SECRET_KEY =env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '134.185.116.221'] # 백엔드 서버 주소 추가 필요
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '134.185.116.221', 'graduart.store'] # 백엔드 서버 주소 추가 필요
 
 # Application definition
 
