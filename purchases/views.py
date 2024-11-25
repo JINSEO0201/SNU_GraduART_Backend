@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 import requests
 from supabase import create_client, Client
-import time
+import time, pytz
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.conf import settings
@@ -37,10 +37,14 @@ def get_purchases(request):
         # 결제 2주 이후 구매확정
         two_weeks = timedelta(days=14)
         now = timezone.now()
+        seoul_tz = pytz.timezone('Asia/Seoul')
 
         for record in purchased.data:
             created_at_datetime = datetime.fromisoformat(record["created_at"].replace("Z", "+00:00"))
-            if now - created_at_datetime >= two_weeks:
+
+            # naive datetime을 aware datetime으로 변환 (Asia/Seoul 시간대)
+            created_at_datetime_aware = seoul_tz.localize(created_at_datetime)  # timezone-aware로 변환
+            if now - created_at_datetime_aware >= two_weeks:
                 item_id = record["item_id"]
                 record["is_confirmed"] = True
                 supabase.table("purchased").update({"is_confirmed" : True}).eq("item_id", item_id).execute()
