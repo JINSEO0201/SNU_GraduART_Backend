@@ -70,7 +70,7 @@ def get_purchases(request):
 
         return Response(purchased_list, status=status.HTTP_200_OK)
     except:
-        return Response({'error': f'구매 내역 조회 중 오류 발생 {now.tzinfo}, {created_at_datetime_aware.tzinfo}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': f'구매 내역 조회 중 오류 발생 {now.tzinfo}, {created_at_datetime}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 @api_view(['GET'])
 def get_purchase_detail(request, item_id):
