@@ -37,15 +37,11 @@ def get_purchases(request):
         # 결제 2주 이후 구매확정
         two_weeks = timedelta(days=14)
         now = timezone.now()
-        seoul_tz = pytz.timezone('Asia/Seoul')
 
         for record in purchased.data:
             created_at_datetime = datetime.fromisoformat(record["created_at"].replace("Z", "+00:00"))
 
-            # naive datetime을 aware datetime으로 변환 (Asia/Seoul 시간대)
-            created_at_datetime_aware = seoul_tz.localize(created_at_datetime)  # timezone-aware로 변환
-            now_aware = seoul_tz.localize(now)
-            if now_aware - created_at_datetime_aware >= two_weeks:
+            if now - created_at_datetime >= two_weeks:
                 item_id = record["item_id"]
                 record["is_confirmed"] = True
                 supabase.table("purchased").update({"is_confirmed" : True}).eq("item_id", item_id).execute()
@@ -71,7 +67,7 @@ def get_purchases(request):
 
         return Response(purchased_list, status=status.HTTP_200_OK)
     except:
-        return Response({'error': f'구매 내역 조회 중 오류 발생 {now.tzinfo}, {created_at_datetime}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': '구매 내역 조회 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 @api_view(['GET'])
 def get_purchase_detail(request, item_id):
