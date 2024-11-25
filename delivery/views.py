@@ -1,10 +1,8 @@
-from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from supabase import create_client, Client
-from django.utils import timezone
 
 # Supabase 클라이언트 설정
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
@@ -23,7 +21,7 @@ def get_delivery_status(request, item_id):
   
     # 운송장 번호 가져오기
     purchased_id = purchased_info.data[0]["id"]
-    delivery_info = supabase.table("delivery").select("tracking_num", "courier_name").eq("purchased_id", purchased_id).execute()
+    delivery_info = supabase.table("delivery").select("tracking_num, courier_name").eq("purchased_id", purchased_id).execute()
     tracking_num = delivery_info.data[0]["tracking_num"]
     courier_name = delivery_info.data[0]["courier_name"]
 

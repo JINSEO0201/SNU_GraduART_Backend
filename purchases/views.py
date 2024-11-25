@@ -75,18 +75,22 @@ def get_purchase_detail(request, item_id):
         user_id = request.user.user_id
         item_id = str(item_id)
 
-        purchase = supabase.table('purchased').select('order_id').eq('user_id', user_id).eq('item_id', item_id).execute()
+        purchase = supabase.table('purchased').select('order_id, created_at').eq('user_id', user_id).eq('item_id', item_id).execute()
 
         if not purchase.data:
             return Response({'error': '구매 내역을 찾을 수 없습니다'}, status=status.HTTP_404_NOT_FOUND)
         
         # 추가적인 주문 정보 리턴
         order_id = purchase.data[0]['order_id']
-        order_info = supabase.table('order_info').select('address', 'name', 'phone_num', 'email', 'payment_method', 'total_price').eq('order_id', order_id).execute()
+        order_info = supabase.table('order_info').select('address, name, phone_num, email, payment_method, total_price').eq('order_id', order_id).execute()
+
+        if not order_info.data:
+            return Response({'error': '주문 정보를 찾을 수 없습니다'}, status=status.HTTP_404_NOT_FOUND)
 
         # 결과 재구성
-        order_info = order_info.data[0] if order_info.data else {}
-        return Response(order_info, status=status.HTTP_200_OK)
+        result = order_info.data[0]
+        result['created_at'] = purchase.data[0]['created_at']
+        return Response(result, status=status.HTTP_200_OK)
     except:
         return Response({'error': '구매 내역 조회 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
