@@ -53,7 +53,7 @@ def google_callback(request):
                 'password': hashed_password,
                 'oauth_provider': 'google',
                 'full_name': user_data.user.user_metadata.get('full_name', ''),
-                'created_at': timezone.now().isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+                'created_at': timezone.localtime().isoformat(timespec='milliseconds') + '+09:00'
             }
             result = supabase.table('users').insert(user_info).execute()
             user_id = result.data[0]['user_id']
@@ -145,7 +145,7 @@ def register(request):
             'password': hashed_password,
             'oauth_provider': 'local',
             'full_name': full_name,
-            'created_at': timezone.now().isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+            'created_at': timezone.localtime().isoformat(timespec='milliseconds') + '+09:00'
         }
 
         # 사용자 정보 저장

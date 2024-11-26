@@ -6,8 +6,8 @@ from supabase import create_client, Client
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime
 from django.utils import timezone
+from datetime import datetime
 
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
@@ -41,14 +41,14 @@ def request_refund(request):
             return Response({'error': '상품 정보가 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # 이메일 전송 포맷
-        subject = f"[GraduArt] 환불 요청 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        subject = f"[GraduArt] 환불 요청 - {timezone.localtime().strftime('%Y-%m-%d %H:%M:%S')}"
         body = f"""
         사용자 ID: {user_id}
         사용자명: {order_info.data[0]['name']}
         전화번호: {order_info.data[0]['phone_num']}
         이메일: {order_info.data[0]['email']}
         ---------------------------------------------
-        주문 날짜: {purchased.data[0]['created_at']}
+        주문 날짜: {datetime.fromisoformat(purchased.data[0]['created_at']).strftime("%Y-%m-%d %H:%M:%S")}
         결제 방법: {order_info.data[0]['payment_method']}
         주문 ID: {order_id}
         총 가격: {order_info.data[0]['total_price']}
@@ -87,7 +87,7 @@ def request_refund(request):
         refund_info = {
             'user_id': user_id,
             'item_id': item_id,
-            'created_at': timezone.now().isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
+            'created_at': timezone.localtime().isoformat(timespec='milliseconds') + '+09:00',
             'order_id': order_id,
             'reason': reason,
         }

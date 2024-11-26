@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 import requests
 from supabase import create_client, Client
-import time, pytz
+import time
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.conf import settings
@@ -36,12 +36,11 @@ def get_purchases(request):
 
         # 결제 2주 이후 구매확정
         two_weeks = timedelta(days=14)
-        now = timezone.now()
 
         for record in purchased.data:
             created_at_datetime = datetime.fromisoformat(record["created_at"].replace("Z", "+00:00"))
-
-            if now - created_at_datetime >= two_weeks:
+            created_at_local = timezone.localtime(timezone.make_aware(created_at_datetime))
+            if timezone.localtime(timezone.now()) - created_at_local >= two_weeks:
                 item_id = record["item_id"]
                 record["is_confirmed"] = True
                 supabase.table("purchased").update({"is_confirmed" : True}).eq("item_id", item_id).execute()
@@ -224,17 +223,14 @@ def approve_purchase(request):
                 return Response({'error: 상품 정보 업데이트 실패'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             # purchased table에 데이터 추가
-            purchase = supabase.table('purchased').insert({
+            supabase.table('purchased').insert({
                 'order_id': oid,
                 'user_id': user_id,
                 'item_id': item_id,
-                'created_at': timezone.now().isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
+                'created_at': timezone.localtime().isoformat(timespec='milliseconds') + '+09:00',
                 'refund': False,
                 'is_confirmed': False,
             }).execute()
-
-            # 배송 테이블 생성
-            supabase.table('delivery').insert({'purchased_id': purchase.data[0]['id']}).execute()
 
             # 장바구니에서 삭제
             supabase.table('cart_item').delete().match({'item_id': item_id, 'user_id': user_id}).execute()
