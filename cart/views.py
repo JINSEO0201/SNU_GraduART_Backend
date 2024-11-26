@@ -29,7 +29,7 @@ def insert_cart(request):
         cart_item = {
             'user_id': user_id,
             'item_id': item_id,
-            'created_at': timezone.now().isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+            'created_at': timezone.localtime().isoformat(timespec='milliseconds') + '+09:00'
         }
         result = supabase.table('cart_item').insert(cart_item).execute()
         
