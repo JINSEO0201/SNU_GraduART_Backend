@@ -34,7 +34,7 @@ SECRET_KEY =env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '134.185.116.221', 'graduart.store'] # 백엔드 서버 주소 추가 필요
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'graduart.store']
 
 # Application definition
 
@@ -179,7 +179,6 @@ FRONT_URL = env('FRONT_URL')
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://134.185.116.221", # 백엔드 서버 주소 추가 필요
     "https://graduart.store",
     "https://graduart.gallery",
 ]
@@ -195,7 +194,6 @@ CORS_ALLOW_HEADERS = [
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
-    'http://134.185.116.221', # 백엔드 서버 주소 추가 필요
-    'http://graduart.store',
+    'https://graduart.store',
     "https://graduart.gallery",
 ]
