@@ -29,7 +29,7 @@ def insert_cart(request):
         cart_item = {
             'user_id': user_id,
             'item_id': item_id,
-            'created_at': timezone.localtime().isoformat(timespec='milliseconds') + '+09:00'
+            'created_at': timezone.now().isoformat()
         }
         result = supabase.table('cart_item').insert(cart_item).execute()
         
@@ -38,7 +38,7 @@ def insert_cart(request):
         else:
             return Response({'error': '장바구니 추가에 실패했습니다.'}, status=status.HTTP_400_BAD_REQUEST)
     except:
-        return Response({'error': '장바구니 추가 중 오류 발생'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': f'장바구니 추가 중 오류가 발생했습니다.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 def get_cart_items(request):
