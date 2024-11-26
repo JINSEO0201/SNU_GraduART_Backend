@@ -118,7 +118,7 @@ def search_items(request):
         'department': result['department'],
         'title': result['title'],
         'description': result['description'],
-        'artist_name': artists_dict[result['artist_id']]['name'] if result['artist_id'] in artists_dict else None,
+        'name': artists_dict[result['artist_id']]['name'] if result['artist_id'] in artists_dict else None,
         'size': result['size'],
         'material': result['material'],
         'image_original': images_dict[result['item_id']]['image_original'] if result['item_id'] in images_dict else None,
