@@ -38,9 +38,9 @@ def get_purchases(request):
         two_weeks = timedelta(days=14)
 
         for record in purchased.data:
-            created_at_datetime = datetime.fromisoformat(record["created_at"].replace("Z", "+00:00"))
-            created_at_local = timezone.localtime(timezone.make_aware(created_at_datetime))
-            if timezone.localtime(timezone.now()) - created_at_local >= two_weeks:
+            created_at_datetime = datetime.fromisoformat(record["created_at"])
+            now_datetime = timezone.now().astimezone()
+            if now_datetime - created_at_datetime >= two_weeks:
                 item_id = record["item_id"]
                 record["is_confirmed"] = True
                 supabase.table("purchased").update({"is_confirmed" : True}).eq("item_id", item_id).execute()
@@ -227,7 +227,7 @@ def approve_purchase(request):
                 'order_id': oid,
                 'user_id': user_id,
                 'item_id': item_id,
-                'created_at': timezone.localtime().isoformat(timespec='milliseconds') + '+09:00',
+                'created_at': timezone.now().isoformat(),
                 'refund': False,
                 'is_confirmed': False,
             }).execute()
